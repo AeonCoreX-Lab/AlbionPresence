@@ -19,3 +19,10 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+
+# AlbionPresence
+.env
+*.keystore
+*.jks
+local.properties
+/vendor/discord_social_sdk/
