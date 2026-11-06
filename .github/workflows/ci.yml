@@ -101,7 +101,7 @@ jobs:
       # A debug APK is signed by Android's auto-generated debug key. It is never a
       # release build and must not be distributed as one. The Discord Social SDK
       # is not part of this build (see docs/BUILDING.md).
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: steps.project.outputs.present == 'true'
         with:
           name: albionpresence-debug-apk
