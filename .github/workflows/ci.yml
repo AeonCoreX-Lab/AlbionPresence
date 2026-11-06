@@ -48,7 +48,7 @@ jobs:
             echo "::notice::package.json not found: run scripts/bootstrap.sh and commit its output. JavaScript checks skipped."
             echo "present=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.project.outputs.present == 'true'
         with:
           node-version: '22'
@@ -86,7 +86,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.project.outputs.present == 'true'
         with:
           node-version: '22'
