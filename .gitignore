@@ -1,0 +1,21 @@
+# Keystore & Signing files
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+key.properties
+
+# Build outputs & APK/AAB files
+*.apk
+*.aab
+build/
+app/build/
+
+# Android Studio & Gradle local files
+.gradle/
+.idea/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/

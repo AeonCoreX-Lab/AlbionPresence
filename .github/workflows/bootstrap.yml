@@ -1,0 +1,90 @@
+# Bootstrap and lock-file sync.
+#
+# UNVERIFIED: this workflow has never run, and scripts/bootstrap.sh has never run
+# either (it was written without network access). Expect to fix a first failure.
+#
+# On every push to main:
+#   1. If package.json does not exist yet, run scripts/bootstrap.sh to generate
+#      the React Native Android project and install dependencies.
+#   2. Otherwise leave the project alone and only refresh package-lock.json.
+#      `--package-lock-only` keeps versions already locked; it does not upgrade
+#      anything unless package.json asks for it.
+#   3. Commit any resulting changes back to main, then start the CI workflow.
+#
+# Commits made with GITHUB_TOKEN do not trigger other workflows, so CI is
+# started explicitly (workflow_dispatch) after a commit. The commit message
+# contains [skip ci] so this workflow does not loop.
+#
+# If main is a protected branch that blocks pushes from GitHub Actions, this
+# workflow cannot push. Allow it, or switch the commit step to open a pull request.
+name: Bootstrap
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: bootstrap-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Generate project / sync lock file
+    runs-on: ubuntu-latest
+    # Skip the bot's own commits.
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Generate the project on first run
+        id: generate
+        run: |
+          if [ -f package.json ]; then
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+            echo "package.json exists: skipping scripts/bootstrap.sh"
+          else
+            chmod +x scripts/bootstrap.sh
+            scripts/bootstrap.sh
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Refresh package-lock.json
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Commit changes
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing to commit."
+            exit 0
+          fi
+          if [ "${{ steps.generate.outputs.generated }}" = "true" ]; then
+            msg="chore: generate React Native project via scripts/bootstrap.sh [skip ci]"
+          else
+            msg="chore: update package-lock.json [skip ci]"
+          fi
+          git commit -m "$msg"
+          git push
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Start CI on the new commit
+        if: steps.commit.outputs.committed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --ref "${{ github.ref_name }}"
